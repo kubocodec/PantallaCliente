@@ -49,7 +49,8 @@ public class VisorPantalla extends Application {
     @Override
     public void start(Stage stage) {
         // Cargar las imágenes del carrusel
-        cargarImagenesDesdeURLs();
+        //cargarImagenesDesdeURLs();
+        cargarImagenesDesdeRecursos();
 
         relojLabel.setFont(Font.font("Arial", FontWeight.BOLD, 72));
         relojLabel.setTextFill(Color.WHITE);
@@ -247,31 +248,6 @@ public class VisorPantalla extends Application {
         fechaLabel.setText(LocalDateTime.now().format(fechaFormatter));
     }
 
-    // ---- CARGAR TURNOS ----
-//    private void cargarTurnos() {
-//        try {
-//            URL url = new URL("http://localhost:8080/api/turnos/ultimos");
-//            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//            conn.setRequestMethod("GET");
-//
-//            if (conn.getResponseCode() == 200) {
-//                InputStream input = conn.getInputStream();
-//                ObjectMapper mapper = new ObjectMapper();
-//                List<Turno> turnos = mapper.readValue(input, new TypeReference<List<Turno>>() {});
-//
-//                filasContainer.getChildren().clear();
-//                for (int i = 0; i < Math.min(turnos.size(), 5); i++) {
-//                    Turno turno = turnos.get(i);
-//                    String prefijo = prefijos.getOrDefault(turno.getCategoria(), "N");
-//                    String turnoTexto = prefijo + turno.getNumero();
-//                    String puestoTexto = String.valueOf(turno.getPuesto());
-//                    filasContainer.getChildren().add(crearFilaTurno(turnoTexto, puestoTexto, i == 0));
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
     private void cargarTurnos() {
         try {
             URL url = new URL("http://" + Config.getIp() + ":" + Config.getPort() + "/api/turnos/ultimos");
@@ -308,26 +284,69 @@ public class VisorPantalla extends Application {
         }
     }
 
+    // ---- CARGAR CARRUSEL DESDE resources/carrusel ----
+//    private void cargarImagenesDesdeRecursos() {
+//        List<String> rutas = Arrays.asList(
+//                "/carrusel/imagen2.jpg",
+//                "/carrusel/imagen3.jpg",
+//                "/carrusel/imagen4.jpg"
+//        );
+//
+//        for (String ruta : rutas) {
+//            try {
+//                URL url = getClass().getResource(ruta); // busca en el classpath
+//                if (url == null) {
+//                    System.err.println("No se encontró " + ruta);
+//                    continue;
+//                }
+//                Image img = new Image(url.toExternalForm(), false);
+//                imagenesCarrusel.add(img);
+//            } catch (Exception e) {
+//                System.err.println("Error cargando " + ruta);
+//                e.printStackTrace();
+//            }
+//        }
+//    }
 
-    // ---- CARGAR CARRUSEL DESDE RESOURCES ----
-    private void cargarImagenesDesdeURLs() {
-        // Aquí defines tus URLs de las imágenes del carrusel
-        List<String> urlsImagenes = Arrays.asList(
-                "https://png.pngtree.com/thumb_back/fw800/background/20250317/pngtree-a-hospital-waiting-room-with-empty-wall-frames-for-advertising-image_17089757.jpg",
-                "https://www.clarin.com/2019/12/04/WVoQaA45_360x240__1.jpg",
-                "https://www.clarin.com/2019/12/04/umVplFRs_1200x0__1.jpg"
+    private void cargarImagenesDesdeRecursos() {
+
+        List<String> rutas = List.of(
+                "/carrusel/imagen1.jpg",
+                "/carrusel/imagen2.jpg",
+                "/carrusel/imagen3.jpg",
+                "/carrusel/imagen4.jpg"
         );
 
-        for (String urlStr : urlsImagenes) {
-            try {
-                Image img = new Image(urlStr, false);
+        for (String ruta : rutas) {
+            try (InputStream in = getClass().getResourceAsStream(ruta)) {
+
+                // 1️⃣  ¿realmente lo encontró?
+                System.out.print("--> " + ruta + "  :  ");
+                if (in == null) {
+                    System.out.println("NO ENCONTRADO");
+                    continue;
+                } else {
+                    System.out.println("OK");
+                }
+
+                // 2️⃣  ¿JavaFX lo decodifica?
+                Image img = new Image(in);
+                if (img.isError()) {
+                    System.err.println("    ⚠  ERROR : " + img.getException());
+                    continue;
+                } else {
+                    System.out.println("    ancho × alto = "
+                            + (int) img.getWidth() + " × " + (int) img.getHeight());
+                }
+
                 imagenesCarrusel.add(img);
-            } catch (Exception e) {
-                System.out.println("Error cargando imagen: " + urlStr);
-                e.printStackTrace();
+
+            } catch (Exception ex) {
+                System.err.println("    EXCEPCIÓN : " + ex.getMessage());
             }
         }
     }
+
 
     // ---- CAMBIAR IMAGEN ----
     private void cambiarImagenCarrusel() {
