@@ -9,6 +9,7 @@
     <version>1.0.0</version>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>17</java.version>
         <javafx.version>20</javafx.version>
     </properties>
@@ -34,20 +35,85 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.17.1</version>  <!-- usa la misma versión que tu jackson-core -->
+            <version>2.17.1</version>
         </dependency>
-
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.8</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
                 <configuration>
-                    <mainClass>com.turnero.VisorPantalla</mainClass>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.turnero.VisorPantalla</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.5.1</version>
+                <configuration>
+                    <name>Cliente Pantalla Turnos</name>
+
+                    <input>${project.build.directory}</input>
+
+                    <destination>target/dist</destination>
+
+                    <mainClass>com.turnero.VisorPantalla</mainClass>
+                    <mainJar>${project.build.finalName}.jar</mainJar>
+                    <type>MSI</type>
+                    <appVersion>${project.version}</appVersion>
+                    <vendor>Tu Empresa</vendor>
+                    <copyright>Copyright 2025</copyright>
+
+                    <winMenu>true</winMenu>
+                    <winShortcut>true</winShortcut>
+                    <winUpgradeUuid>b0e7e72a-b6b1-482a-9e79-45f8a0a4c0fd</winUpgradeUuid>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>jpackage</id>
+                        <goals>
+                            <goal>jpackage</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

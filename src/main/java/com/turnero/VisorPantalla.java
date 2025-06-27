@@ -20,7 +20,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
+import com.turnero.Config;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -274,7 +274,7 @@ public class VisorPantalla extends Application {
 //    }
     private void cargarTurnos() {
         try {
-            URL url = new URL("http://localhost:8080/api/turnos/ultimos");
+            URL url = new URL("http://" + Config.getIp() + ":" + Config.getPort() + "/api/turnos/ultimos");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
