@@ -13,12 +13,16 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
+import javafx.scene.Group;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Scale;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.stage.Screen;
+import javafx.geometry.Rectangle2D;
 import javafx.util.Duration;
 import com.turnero.Config;
 import java.io.InputStream;
@@ -48,6 +52,11 @@ public class VisorPantalla extends Application {
 
     @Override
     public void start(Stage stage) {
+        if (Config.getIp() == null) {
+            ConfigWindow cw = new ConfigWindow();
+            cw.start(new Stage());
+            return;
+        }
         // Cargar las imágenes del carrusel
         //cargarImagenesDesdeURLs();
         cargarImagenesDesdeRecursos();
@@ -59,17 +68,57 @@ public class VisorPantalla extends Application {
         actualizarReloj();
 
         BorderPane root = new BorderPane();
-        //root.setStyle("-fx-background: linear-gradient(to bottom, #f0f2f5, #ffffff);");
-        root.setStyle("-fx-background-color: linear-gradient(to bottom, #f0f2f5, #ffffff);");
+        root.setPrefSize(1920, 1080);
+        
         root.setTop(crearHeaderCompleto());
         root.setCenter(crearContenidoCentral());
         root.setBottom(crearFooter());
 
-        Scene scene = new Scene(root, 1920, 1080);
+        // Escalar proporcionalmente todo el contenido para adaptarse a la pantalla
+        Group scaleGroup = new Group(root);
+        StackPane appRoot = new StackPane(scaleGroup);
+        appRoot.setStyle("-fx-background-color: linear-gradient(to bottom, #f0f2f5, #ffffff);");
+        
+        Scale scaleTransform = new Scale(1, 1, 0, 0);
+        root.getTransforms().add(scaleTransform);
+
+        appRoot.widthProperty().addListener((obs, oldVal, newVal) -> {
+            double scale = Math.min(appRoot.getWidth() / 1920.0, appRoot.getHeight() / 1080.0);
+            scaleTransform.setX(scale);
+            scaleTransform.setY(scale);
+        });
+        
+        appRoot.heightProperty().addListener((obs, oldVal, newVal) -> {
+            double scale = Math.min(appRoot.getWidth() / 1920.0, appRoot.getHeight() / 1080.0);
+            scaleTransform.setX(scale);
+            scaleTransform.setY(scale);
+        });
+
+        Scene scene = new Scene(appRoot, 1920, 1080);
+        
+        // --- Doble clic para pantalla completa ---
+        scene.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                stage.setFullScreen(true);
+            }
+        });
+
         stage.setScene(scene);
         stage.setTitle("Sistema Profesional de Turnos - KuboCode");
-        stage.setFullScreen(true);
+
+        // --- Mostrar en la pantalla complementaria (si existe) ---
+        List<Screen> screens = Screen.getScreens();
+        if (screens.size() > 1) {
+            Screen secondaryScreen = screens.get(1);
+            Rectangle2D bounds = secondaryScreen.getVisualBounds();
+            stage.setX(bounds.getMinX());
+            stage.setY(bounds.getMinY());
+            stage.setWidth(bounds.getWidth());
+            stage.setHeight(bounds.getHeight());
+        }
+
         stage.show();
+        stage.setFullScreen(true);
 
         // Timeline reloj
         Timeline relojTimeline = new Timeline(
@@ -100,17 +149,6 @@ public class VisorPantalla extends Application {
     private VBox crearHeaderCompleto() {
         VBox headerCompleto = new VBox();
 
-        HBox headerPrincipal = new HBox();
-        headerPrincipal.setPrefHeight(160);
-        headerPrincipal.setStyle("-fx-background-color: white;");
-        headerPrincipal.setAlignment(Pos.CENTER);
-        headerPrincipal.setPadding(new Insets(30));
-
-        Label titulo = new Label("SISTEMA DE TURNOS");
-        titulo.setFont(Font.font("Arial", FontWeight.BOLD, 54));
-        titulo.setTextFill(Color.web("#0f5685"));
-        headerPrincipal.getChildren().add(titulo);
-
         HBox barraInfo = new HBox();
         barraInfo.setPrefHeight(100);
         barraInfo.setStyle("-fx-background-color: #34495e;");
@@ -127,7 +165,7 @@ public class VisorPantalla extends Application {
         bienvenida.setTextFill(Color.WHITE);
 
         barraInfo.getChildren().addAll(bienvenida, tiempoContainer);
-        headerCompleto.getChildren().addAll(headerPrincipal, barraInfo);
+        headerCompleto.getChildren().addAll(barraInfo);
         return headerCompleto;
     }
 
@@ -356,6 +394,10 @@ public class VisorPantalla extends Application {
     }
 
     public static void main(String[] args) {
-        launch();
+        if (Config.getIp() == null) {
+            Application.launch(ConfigWindow.class, args);
+        } else {
+            launch(args);
+        }
     }
 }
