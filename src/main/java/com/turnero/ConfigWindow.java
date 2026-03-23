@@ -36,10 +36,16 @@ public class ConfigWindow extends Application {
         lblDesc.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d; -fx-text-alignment: center;");
 
         txtIp = new TextField();
-        txtIp.setPromptText("Ejemplo: 192.168.x.x o localhost");
+        txtIp.setPromptText("Ejemplo: 192.168.1.100");
         txtIp.setPrefHeight(45);
         txtIp.setStyle("-fx-font-size: 16px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #bdc3c7; -fx-padding: 10;");
         
+        // Mensaje de error (oculto por defecto)
+        Label lblError = new Label("⚠ Ingrese una IP válida (Ej: 192.168.1.100)");
+        lblError.setStyle("-fx-font-size: 13px; -fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+        lblError.setVisible(false);
+        lblError.setManaged(false);
+
         // Auto-enfocar el campo de IP
         txtIp.requestFocus();
 
@@ -51,8 +57,8 @@ public class ConfigWindow extends Application {
         btnSave.setOnMouseEntered(e -> btnSave.setStyle("-fx-background-color: linear-gradient(to right, #2980b9, #1f618d); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 8; -fx-cursor: hand;"));
         btnSave.setOnMouseExited(e -> btnSave.setStyle("-fx-background-color: linear-gradient(to right, #3498db, #2980b9); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 8; -fx-cursor: hand;"));
 
-        btnSave.setOnAction(e -> handleSave());
-        txtIp.setOnAction(e -> handleSave());
+        btnSave.setOnAction(e -> handleSave(lblError));
+        txtIp.setOnAction(e -> handleSave(lblError));
 
         DropShadow shadow = new DropShadow();
         shadow.setRadius(25);
@@ -60,9 +66,9 @@ public class ConfigWindow extends Application {
         shadow.setOffsetY(5);
         root.setEffect(shadow);
 
-        root.getChildren().addAll(lblTitle, lblDesc, txtIp, btnSave);
+        root.getChildren().addAll(lblTitle, lblDesc, txtIp, lblError, btnSave);
 
-        Scene scene = new Scene(root, 450, 320);
+        Scene scene = new Scene(root, 450, 340);
         scene.setFill(Color.TRANSPARENT);
         primaryStage.setScene(scene);
         primaryStage.centerOnScreen();
@@ -70,14 +76,28 @@ public class ConfigWindow extends Application {
         primaryStage.show();
     }
     
-    private void handleSave() {
+    /** Valida formato IPv4: 4 octetos de 0-255, o bien "localhost" */
+    private boolean esIpValida(String ip) {
+        if (ip.equalsIgnoreCase("localhost")) return true;
+        String regex = "^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}"
+                     + "(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$";
+        return ip.matches(regex);
+    }
+
+    private void handleSave(Label lblError) {
         String ip = txtIp.getText().trim();
-        if (!ip.isEmpty()) {
-            Config.saveIp(ip);
-            stage.close();
-            // Arrancar la app principal
-            iniciarApp();
+        if (!esIpValida(ip)) {
+            lblError.setVisible(true);
+            lblError.setManaged(true);
+            txtIp.setStyle("-fx-font-size: 16px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e74c3c; -fx-padding: 10;");
+            return;
         }
+        // IP válida: ocultar error y continuar
+        lblError.setVisible(false);
+        lblError.setManaged(false);
+        Config.saveIp(ip);
+        stage.close();
+        iniciarApp();
     }
 
     private void iniciarApp() {

@@ -348,7 +348,7 @@ public class VisorPantalla extends Application {
 
     private void cargarImagenesDesdeRecursos() {
 
-        List<String> rutas = List.of(
+        List<String> rutas = Arrays.asList(
                 "/carrusel/imagen1.jpg",
                 "/carrusel/imagen2.jpg",
                 "/carrusel/imagen3.jpg",
