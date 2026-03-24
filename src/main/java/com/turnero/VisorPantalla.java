@@ -25,12 +25,18 @@ import javafx.stage.Screen;
 import javafx.geometry.Rectangle2D;
 import javafx.util.Duration;
 import com.turnero.Config;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 
 public class VisorPantalla extends Application {
 
@@ -42,6 +48,9 @@ public class VisorPantalla extends Application {
     private List<Image> imagenesCarrusel = new ArrayList<>();
     private ImageView imagenCentral = new ImageView();
     private int indiceImagenActual = 0;
+
+    // Tracker para el último turno llamado
+    private Long ultimoIdTurno = null;
 
     private final Map<String, String> prefijos = new LinkedHashMap<String, String>() {{
         put("General", "G");
@@ -305,6 +314,16 @@ public class VisorPantalla extends Application {
                         new TypeReference<List<Turno>>() {}
                 );
 
+                if (!turnos.isEmpty()) {
+                    Turno primerTurno = turnos.get(0);
+                    if (ultimoIdTurno == null) {
+                        ultimoIdTurno = primerTurno.getId();
+                    } else if (!ultimoIdTurno.equals(primerTurno.getId())) {
+                        ultimoIdTurno = primerTurno.getId();
+                        reproducirSonido();
+                    }
+                }
+
                 filasContainer.getChildren().clear();
 
                 // Mostramos máximo 5, resaltando el primero
@@ -391,6 +410,50 @@ public class VisorPantalla extends Application {
         if (imagenesCarrusel.isEmpty()) return;
         imagenCentral.setImage(imagenesCarrusel.get(indiceImagenActual));
         indiceImagenActual = (indiceImagenActual + 1) % imagenesCarrusel.size();
+    }
+
+    // ---- METODO SONIDO ----
+    private void reproducirSonido() {
+        new Thread(() -> {
+            try {
+                // Leer el audio completo en memoria para evitar problemas con JARs empaquetados
+                InputStream rawStream = getClass().getResourceAsStream("/sonidos/timbre.wav");
+                if (rawStream == null) {
+                    System.err.println("No se encontró el archivo de sonido: /sonidos/timbre.wav");
+                    return;
+                }
+
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                byte[] data = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = rawStream.read(data)) != -1) {
+                    buffer.write(data, 0, bytesRead);
+                }
+                rawStream.close();
+                byte[] audioBytes = buffer.toByteArray();
+
+                for (int i = 0; i < 2; i++) {
+                    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+                    AudioInputStream ais = AudioSystem.getAudioInputStream(byteStream);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(ais);
+
+                    // Subir volumen al máximo
+                    if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                        FloatControl volume = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                        volume.setValue(volume.getMaximum());
+                    }
+
+                    clip.start();
+
+                    // Esperar a que termine el sonido antes de repetir
+                    Thread.sleep(clip.getMicrosecondLength() / 1000 + 300);
+                    clip.close();
+                }
+            } catch (Exception e) {
+                System.err.println("Error al reproducir el sonido: " + e.getMessage());
+            }
+        }).start();
     }
 
     public static void main(String[] args) {
