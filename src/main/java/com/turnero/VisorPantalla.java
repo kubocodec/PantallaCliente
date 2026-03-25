@@ -371,42 +371,48 @@ public class VisorPantalla extends Application {
 //    }
 
     private void cargarImagenesDesdeRecursos() {
+        new Thread(() -> {
+            try {
+                // 1. Obtener lista de nombres del servidor
+                URL listaUrl = new URL(
+                        "http://" + Config.getIp() + ":" + Config.getPort() + "/api/carrusel/lista");
+                HttpURLConnection conn = (HttpURLConnection) listaUrl.openConnection();
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
 
-        List<String> rutas = Arrays.asList(
-                "/carrusel/imagen1.jpg",
-                "/carrusel/imagen2.jpg",
-                "/carrusel/imagen3.jpg",
-                "/carrusel/imagen4.jpg"
-        );
+                List<String> nombres = new ObjectMapper()
+                        .readValue(conn.getInputStream(), new TypeReference<List<String>>() {});
+                conn.disconnect();
 
-        for (String ruta : rutas) {
-            try (InputStream in = getClass().getResourceAsStream(ruta)) {
-
-                // 1️⃣  ¿realmente lo encontró?
-                System.out.print("--> " + ruta + "  :  ");
-                if (in == null) {
-                    System.out.println("NO ENCONTRADO");
-                    continue;
-                } else {
-                    System.out.println("OK");
+                // 2. Cargar cada imagen por su nombre
+                final List<Image> nuevas = new java.util.ArrayList<>();
+                for (String nombre : nombres) {
+                    try {
+                        String imgUrlStr = "http://" + Config.getIp() + ":" + Config.getPort()
+                                + "/api/carrusel/imagen/" + nombre;
+                        Image img = new Image(imgUrlStr, false);
+                        if (!img.isError()) {
+                            nuevas.add(img);
+                        } else {
+                            System.err.println("Error cargando imagen: " + nombre);
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("Error al descargar imagen " + nombre + ": " + ex.getMessage());
+                    }
                 }
 
-                // 2️⃣  ¿JavaFX lo decodifica?
-                Image img = new Image(in);
-                if (img.isError()) {
-                    System.err.println("    ⚠  ERROR : " + img.getException());
-                    continue;
-                } else {
-                    System.out.println("    ancho × alto = "
-                            + (int) img.getWidth() + " × " + (int) img.getHeight());
-                }
+                javafx.application.Platform.runLater(() -> {
+                    imagenesCarrusel.clear();
+                    imagenesCarrusel.addAll(nuevas);
+                    if (!imagenesCarrusel.isEmpty()) {
+                        imagenCentral.setImage(imagenesCarrusel.get(0));
+                    }
+                });
 
-                imagenesCarrusel.add(img);
-
-            } catch (Exception ex) {
-                System.err.println("    EXCEPCIÓN : " + ex.getMessage());
+            } catch (Exception e) {
+                System.err.println("No se pudo cargar el carrusel desde el servidor: " + e.getMessage());
             }
-        }
+        }).start();
     }
 
 
