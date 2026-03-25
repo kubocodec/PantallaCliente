@@ -51,6 +51,7 @@ public class VisorPantalla extends Application {
 
     // Tracker para el último turno llamado
     private Long ultimoIdTurno = null;
+    private Integer ultimaCantidadLlamadas = null;
 
     private final Map<String, String> prefijos = new LinkedHashMap<String, String>() {{
         put("General", "G");
@@ -316,10 +317,14 @@ public class VisorPantalla extends Application {
 
                 if (!turnos.isEmpty()) {
                     Turno primerTurno = turnos.get(0);
+                    Integer actualCantidadLlamadas = primerTurno.getCantidadLlamadas() != null ? primerTurno.getCantidadLlamadas() : 1;
+
                     if (ultimoIdTurno == null) {
                         ultimoIdTurno = primerTurno.getId();
-                    } else if (!ultimoIdTurno.equals(primerTurno.getId())) {
+                        ultimaCantidadLlamadas = actualCantidadLlamadas;
+                    } else if (!ultimoIdTurno.equals(primerTurno.getId()) || (ultimoIdTurno.equals(primerTurno.getId()) && actualCantidadLlamadas > (ultimaCantidadLlamadas != null ? ultimaCantidadLlamadas : 0))) {
                         ultimoIdTurno = primerTurno.getId();
+                        ultimaCantidadLlamadas = actualCantidadLlamadas;
                         reproducirSonido();
                     }
                 }

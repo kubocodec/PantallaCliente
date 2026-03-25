@@ -7,6 +7,7 @@ public class Turno {
     private Long id;
     private String numero;
     private Integer puesto;
+    private Integer cantidadLlamadas;
 
     // Getters y setters
 
@@ -28,5 +29,13 @@ public class Turno {
 
     public void setPuesto(Integer puesto) {
         this.puesto = puesto;
+    }
+
+    public Integer getCantidadLlamadas() {
+        return cantidadLlamadas;
+    }
+
+    public void setCantidadLlamadas(Integer cantidadLlamadas) {
+        this.cantidadLlamadas = cantidadLlamadas;
     }
 }
