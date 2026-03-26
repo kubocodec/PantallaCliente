@@ -28,6 +28,8 @@ import com.turnero.Config;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -325,7 +327,8 @@ public class VisorPantalla extends Application {
                     } else if (!ultimoIdTurno.equals(primerTurno.getId()) || (ultimoIdTurno.equals(primerTurno.getId()) && actualCantidadLlamadas > (ultimaCantidadLlamadas != null ? ultimaCantidadLlamadas : 0))) {
                         ultimoIdTurno = primerTurno.getId();
                         ultimaCantidadLlamadas = actualCantidadLlamadas;
-                        reproducirSonido();
+                        // En lugar de sonido asíncrono, lo encolamos con el número y puesto
+                        AudioQueueManager.agregarTurno(primerTurno.getNumero(), String.valueOf(primerTurno.getPuesto()));
                     }
                 }
 
@@ -423,17 +426,46 @@ public class VisorPantalla extends Application {
         indiceImagenActual = (indiceImagenActual + 1) % imagenesCarrusel.size();
     }
 
-    // ---- METODO SONIDO ----
-    private void reproducirSonido() {
-        new Thread(() -> {
+    // ---- SISTEMA DE AUDIO EN COLA (TTS) ----
+    private static class AudioQueueManager {
+        private static final BlockingQueue<TurnoAudioData> queue = new LinkedBlockingQueue<>();
+        private static boolean isWorkerRunning = false;
+
+        public static synchronized void agregarTurno(String turno, String puesto) {
+            queue.offer(new TurnoAudioData(turno, puesto));
+            if (!isWorkerRunning) {
+                iniciarWorker();
+            }
+        }
+
+        private static void iniciarWorker() {
+            isWorkerRunning = true;
+            Thread worker = new Thread(() -> {
+                while (true) {
+                    try {
+                        TurnoAudioData data = queue.take(); // Bloquea hasta que haya un turno en cola
+                        reproducirSonidoSincrono(); // Reproduce el "Timbre" 2 veces y espera pacientemente
+                        hablar(data.turno, data.puesto); // Llama al sistema de voz nativo de Windows
+                        Thread.sleep(1500); // Dar un pequeño respiro antes del siguiente turno si los hay
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            worker.setDaemon(true);
+            worker.start();
+        }
+
+        private static void reproducirSonidoSincrono() {
             try {
-                // Leer el audio completo en memoria para evitar problemas con JARs empaquetados
-                InputStream rawStream = getClass().getResourceAsStream("/sonidos/timbre.wav");
+                InputStream rawStream = VisorPantalla.class.getResourceAsStream("/sonidos/timbre.wav");
                 if (rawStream == null) {
-                    System.err.println("No se encontró el archivo de sonido: /sonidos/timbre.wav");
+                    System.err.println("No se encontró /sonidos/timbre.wav");
                     return;
                 }
-
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 byte[] data = new byte[4096];
                 int bytesRead;
@@ -448,23 +480,53 @@ public class VisorPantalla extends Application {
                     AudioInputStream ais = AudioSystem.getAudioInputStream(byteStream);
                     Clip clip = AudioSystem.getClip();
                     clip.open(ais);
-
-                    // Subir volumen al máximo
                     if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
                         FloatControl volume = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
                         volume.setValue(volume.getMaximum());
                     }
-
                     clip.start();
-
-                    // Esperar a que termine el sonido antes de repetir
-                    Thread.sleep(clip.getMicrosecondLength() / 1000 + 300);
+                    
+                    // Esperar a que el timbre termine completamente
+                    while (clip.isRunning()) {
+                        Thread.sleep(100);
+                    }
+                    // Pequeña pausa entre reproducciones del timbre (ajustado de 300 a 400ms)
+                    Thread.sleep(400); 
                     clip.close();
                 }
+                // Pausa extra de medio segundo después de los timbres y antes de la voz
+                Thread.sleep(500); 
             } catch (Exception e) {
-                System.err.println("Error al reproducir el sonido: " + e.getMessage());
+                System.err.println("Error al reproducir sonido: " + e.getMessage());
             }
-        }).start();
+        }
+
+        private static void hablar(String turno, String puesto) {
+            try {
+                // Formateamos el turno. Si es un turno "A001", la voz suele decirlo como "A, cero cero uno"
+                // Lo enviamos directo para que el motor de voz decida cómo leerlo mejor.
+                String texto = "Turno " + turno + ", acercarse al módulo " + puesto;
+                
+                // Ejecutamos TTS usando el motor de voz integrado de Windows vía PowerShell
+                String script = "Add-Type -AssemblyName System.Speech; " +
+                                "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                                "$synth.Rate = 0; " + // 0 = Velocidad normal
+                                "$synth.Speak('" + texto + "');";
+                
+                ProcessBuilder pb = new ProcessBuilder("powershell.exe", "-Command", script);
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                process.waitFor(); // Espera a que termine la frase completa
+            } catch (Exception e) {
+                System.err.println("Error en motor TTS: " + e.getMessage());
+            }
+        }
+
+        private static class TurnoAudioData {
+            String turno;
+            String puesto;
+            TurnoAudioData(String t, String p) { this.turno = t; this.puesto = p; }
+        }
     }
 
     public static void main(String[] args) {
