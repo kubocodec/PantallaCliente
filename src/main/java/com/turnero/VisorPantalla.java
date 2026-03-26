@@ -108,29 +108,34 @@ public class VisorPantalla extends Application {
 
         Scene scene = new Scene(appRoot, 1920, 1080);
         
-        // --- Doble clic para pantalla completa ---
+        // --- Doble clic para salir/entrar (opcional, ya no usa full screen nativo) ---
         scene.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
-                stage.setFullScreen(true);
+                // stage.setFullScreen(!stage.isFullScreen());
             }
         });
 
         stage.setScene(scene);
         stage.setTitle("Sistema Profesional de Turnos - KuboCode");
+        
+        // --- Evitar minimizado al perder foco (Ventana sin bordes + Maximizado manual) ---
+        stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 
         // --- Mostrar en la pantalla complementaria (si existe) ---
         List<Screen> screens = Screen.getScreens();
+        Rectangle2D bounds;
         if (screens.size() > 1) {
-            Screen secondaryScreen = screens.get(1);
-            Rectangle2D bounds = secondaryScreen.getVisualBounds();
-            stage.setX(bounds.getMinX());
-            stage.setY(bounds.getMinY());
-            stage.setWidth(bounds.getWidth());
-            stage.setHeight(bounds.getHeight());
+            bounds = screens.get(1).getBounds(); // getBounds cubre la barra de tareas
+        } else {
+            bounds = Screen.getPrimary().getBounds(); // getBounds cubre la barra de tareas
         }
+        
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth());
+        stage.setHeight(bounds.getHeight());
 
         stage.show();
-        stage.setFullScreen(true);
 
         // Timeline reloj
         Timeline relojTimeline = new Timeline(
@@ -486,16 +491,11 @@ public class VisorPantalla extends Application {
                     }
                     clip.start();
                     
-                    // Esperar a que el timbre termine completamente
-                    while (clip.isRunning()) {
-                        Thread.sleep(100);
-                    }
-                    // Pequeña pausa entre reproducciones del timbre (ajustado de 300 a 400ms)
-                    Thread.sleep(400); 
+                    // Esperar usando la duración real del clip (isRunning() puede fallar porque start es asíncrono)
+                    long durationMs = clip.getMicrosecondLength() / 1000;
+                    Thread.sleep(durationMs);
                     clip.close();
                 }
-                // Pausa extra de medio segundo después de los timbres y antes de la voz
-                Thread.sleep(500); 
             } catch (Exception e) {
                 System.err.println("Error al reproducir sonido: " + e.getMessage());
             }
