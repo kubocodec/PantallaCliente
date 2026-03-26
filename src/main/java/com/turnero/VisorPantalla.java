@@ -475,7 +475,7 @@ public class VisorPantalla extends Application {
                 rawStream.close();
                 byte[] audioBytes = buffer.toByteArray();
 
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 1; i++) {
                     ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
                     AudioInputStream ais = AudioSystem.getAudioInputStream(byteStream);
                     Clip clip = AudioSystem.getClip();
