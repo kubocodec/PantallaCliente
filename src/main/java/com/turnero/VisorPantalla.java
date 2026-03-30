@@ -244,7 +244,7 @@ public class VisorPantalla extends Application {
         headerTurno.setPrefWidth(350);
         headerTurno.setAlignment(Pos.CENTER);
 
-        Label headerPuesto = new Label("PUESTO");
+        Label headerPuesto = new Label("MÓDULO");
         headerPuesto.setFont(Font.font("Arial", FontWeight.BOLD, 40));
         headerPuesto.setTextFill(Color.BLACK);
         headerPuesto.setPrefWidth(350);
@@ -466,9 +466,13 @@ public class VisorPantalla extends Application {
                 String script = "Add-Type -AssemblyName System.Speech; " +
                         "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
                         "$synth.Rate = 0; " +
-                        "$voces = $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -match '^es-' }; " +
-                        "if ($voces.Length -gt 0 -or $voces.Count -gt 0) { $synth.SelectVoice($voces[0].VoiceInfo.Name) }; " +
-                        "$synth.Speak(' '); " + // Forza la carga inicial de voces (evita delay silencioso en primer llamado)
+                        "$voces = $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -match '^es-' }; "
+                        +
+                        "if ($voces.Length -gt 0 -or $voces.Count -gt 0) { $synth.SelectVoice($voces[0].VoiceInfo.Name) }; "
+                        +
+                        "$synth.Speak(' '); " + // Forza la carga inicial de voces (evita delay silencioso en primer
+                                                // llamado)
+                        "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; " +
                         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                         "while ($true) { " +
                         "  $text = [Console]::ReadLine(); " +
