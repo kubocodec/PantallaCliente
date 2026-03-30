@@ -7,10 +7,17 @@ import java.io.IOException;
 import java.util.Properties;
 
 public class Config {
-    private static final String CONFIG_FILE = "config.properties";
+    private static File getConfigFile() {
+        String appData = System.getProperty("user.home");
+        File dir = new File(appData, ".turnero");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return new File(dir, "pantalla_cliente_config.properties");
+    }
 
     public static String getIp() {
-        File file = new File(CONFIG_FILE);
+        File file = getConfigFile();
         if (!file.exists()) return null;
         
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -25,7 +32,7 @@ public class Config {
     }
 
     public static int getPort() {
-        File file = new File(CONFIG_FILE);
+        File file = getConfigFile();
         if (!file.exists()) return 8080;
         
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -41,7 +48,7 @@ public class Config {
     public static void saveIp(String ip) {
         Properties props = new Properties();
         try {
-            File file = new File(CONFIG_FILE);
+            File file = getConfigFile();
             if (file.exists()) {
                 try (FileInputStream fis = new FileInputStream(file)) {
                     props.load(fis);

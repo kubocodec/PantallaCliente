@@ -36,3 +36,11 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Instaladores y Ejecutables ###
+*.exe
+*.msi
+PantallaCliente*.exe
+
+### Archivos de Configuración Local ###
+config.properties
