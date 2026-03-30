@@ -28,6 +28,10 @@ import com.turnero.Config;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.net.HttpURLConnection;
@@ -55,12 +59,14 @@ public class VisorPantalla extends Application {
     private Long ultimoIdTurno = null;
     private Integer ultimaCantidadLlamadas = null;
 
-    private final Map<String, String> prefijos = new LinkedHashMap<String, String>() {{
-        put("General", "G");
-        put("Preferencial", "P");
-        put("Discapacidad", "D");
-        put("AdultoMayor", "A");
-    }};
+    private final Map<String, String> prefijos = new LinkedHashMap<String, String>() {
+        {
+            put("General", "G");
+            put("Preferencial", "P");
+            put("Discapacidad", "D");
+            put("AdultoMayor", "A");
+        }
+    };
 
     @Override
     public void start(Stage stage) {
@@ -70,7 +76,7 @@ public class VisorPantalla extends Application {
             return;
         }
         // Cargar las imágenes del carrusel
-        //cargarImagenesDesdeURLs();
+        // cargarImagenesDesdeURLs();
         cargarImagenesDesdeRecursos();
 
         relojLabel.setFont(Font.font("Arial", FontWeight.BOLD, 72));
@@ -81,7 +87,7 @@ public class VisorPantalla extends Application {
 
         BorderPane root = new BorderPane();
         root.setPrefSize(1920, 1080);
-        
+
         root.setTop(crearHeaderCompleto());
         root.setCenter(crearContenidoCentral());
         root.setBottom(crearFooter());
@@ -90,7 +96,7 @@ public class VisorPantalla extends Application {
         Group scaleGroup = new Group(root);
         StackPane appRoot = new StackPane(scaleGroup);
         appRoot.setStyle("-fx-background-color: linear-gradient(to bottom, #f0f2f5, #ffffff);");
-        
+
         Scale scaleTransform = new Scale(1, 1, 0, 0);
         root.getTransforms().add(scaleTransform);
 
@@ -99,7 +105,7 @@ public class VisorPantalla extends Application {
             scaleTransform.setX(scale);
             scaleTransform.setY(scale);
         });
-        
+
         appRoot.heightProperty().addListener((obs, oldVal, newVal) -> {
             double scale = Math.min(appRoot.getWidth() / 1920.0, appRoot.getHeight() / 1080.0);
             scaleTransform.setX(scale);
@@ -107,7 +113,7 @@ public class VisorPantalla extends Application {
         });
 
         Scene scene = new Scene(appRoot, 1920, 1080);
-        
+
         // --- Doble clic para salir/entrar (opcional, ya no usa full screen nativo) ---
         scene.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
@@ -117,8 +123,9 @@ public class VisorPantalla extends Application {
 
         stage.setScene(scene);
         stage.setTitle("Sistema Profesional de Turnos - KuboCode");
-        
-        // --- Evitar minimizado al perder foco (Ventana sin bordes + Maximizado manual) ---
+
+        // --- Evitar minimizado al perder foco (Ventana sin bordes + Maximizado manual)
+        // ---
         stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 
         // --- Mostrar en la pantalla complementaria (si existe) ---
@@ -129,7 +136,7 @@ public class VisorPantalla extends Application {
         } else {
             bounds = Screen.getPrimary().getBounds(); // getBounds cubre la barra de tareas
         }
-        
+
         stage.setX(bounds.getMinX());
         stage.setY(bounds.getMinY());
         stage.setWidth(bounds.getWidth());
@@ -140,24 +147,21 @@ public class VisorPantalla extends Application {
         // Timeline reloj
         Timeline relojTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(0), e -> actualizarReloj()),
-                new KeyFrame(Duration.seconds(1))
-        );
+                new KeyFrame(Duration.seconds(1)));
         relojTimeline.setCycleCount(Timeline.INDEFINITE);
         relojTimeline.play();
 
         // Timeline turnos
         Timeline turnosTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(0), e -> cargarTurnos()),
-                new KeyFrame(Duration.seconds(3))
-        );
+                new KeyFrame(Duration.seconds(3)));
         turnosTimeline.setCycleCount(Timeline.INDEFINITE);
         turnosTimeline.play();
 
         // Timeline carrusel imágenes
         Timeline carruselTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(0), e -> cambiarImagenCarrusel()),
-                new KeyFrame(Duration.seconds(8))
-        );
+                new KeyFrame(Duration.seconds(8)));
         carruselTimeline.setCycleCount(Timeline.INDEFINITE);
         carruselTimeline.play();
     }
@@ -178,7 +182,7 @@ public class VisorPantalla extends Application {
         tiempoContainer.getChildren().addAll(relojLabel, fechaLabel);
 
         Label bienvenida = new Label("¡Bienvenidos! Manténganse atentos a su turno");
-        bienvenida.setFont(Font.font("Arial", FontWeight.NORMAL, 28));
+        bienvenida.setFont(Font.font("Arial", FontWeight.NORMAL, 35));
         bienvenida.setTextFill(Color.WHITE);
 
         barraInfo.getChildren().addAll(bienvenida, tiempoContainer);
@@ -229,7 +233,8 @@ public class VisorPantalla extends Application {
         tablaContainer.setEffect(sombra);
 
         HBox headerTabla = new HBox();
-        headerTabla.setStyle("-fx-background: linear-gradient(to right, #2980b9, #3498db); -fx-background-radius: 20 20 0 0;");
+        headerTabla.setStyle(
+                "-fx-background: linear-gradient(to right, #2980b9, #3498db); -fx-background-radius: 20 20 0 0;");
         headerTabla.setPrefHeight(80);
         headerTabla.setAlignment(Pos.CENTER);
 
@@ -297,7 +302,8 @@ public class VisorPantalla extends Application {
     // ---- ACTUALIZAR RELOJ ----
     private void actualizarReloj() {
         DateTimeFormatter horaFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        DateTimeFormatter fechaFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
+        DateTimeFormatter fechaFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy",
+                new Locale("es", "ES"));
 
         relojLabel.setText(LocalDateTime.now().format(horaFormatter));
         fechaLabel.setText(LocalDateTime.now().format(fechaFormatter));
@@ -314,26 +320,31 @@ public class VisorPantalla extends Application {
             if (conn.getResponseCode() == 200) {
                 InputStream input = conn.getInputStream();
                 ObjectMapper mapper = new ObjectMapper()
-                        .registerModule(new JavaTimeModule())          // para LocalDateTime
+                        .registerModule(new JavaTimeModule()) // para LocalDateTime
                         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
                 List<Turno> turnos = mapper.readValue(
                         input,
-                        new TypeReference<List<Turno>>() {}
-                );
+                        new TypeReference<List<Turno>>() {
+                        });
 
                 if (!turnos.isEmpty()) {
                     Turno primerTurno = turnos.get(0);
-                    Integer actualCantidadLlamadas = primerTurno.getCantidadLlamadas() != null ? primerTurno.getCantidadLlamadas() : 1;
+                    Integer actualCantidadLlamadas = primerTurno.getCantidadLlamadas() != null
+                            ? primerTurno.getCantidadLlamadas()
+                            : 1;
 
                     if (ultimoIdTurno == null) {
                         ultimoIdTurno = primerTurno.getId();
                         ultimaCantidadLlamadas = actualCantidadLlamadas;
-                    } else if (!ultimoIdTurno.equals(primerTurno.getId()) || (ultimoIdTurno.equals(primerTurno.getId()) && actualCantidadLlamadas > (ultimaCantidadLlamadas != null ? ultimaCantidadLlamadas : 0))) {
+                    } else if (!ultimoIdTurno.equals(primerTurno.getId()) || (ultimoIdTurno.equals(primerTurno.getId())
+                            && actualCantidadLlamadas > (ultimaCantidadLlamadas != null ? ultimaCantidadLlamadas
+                                    : 0))) {
                         ultimoIdTurno = primerTurno.getId();
                         ultimaCantidadLlamadas = actualCantidadLlamadas;
                         // En lugar de sonido asíncrono, lo encolamos con el número y puesto
-                        AudioQueueManager.agregarTurno(primerTurno.getNumero(), String.valueOf(primerTurno.getPuesto()));
+                        AudioQueueManager.agregarTurno(primerTurno.getNumero(),
+                                String.valueOf(primerTurno.getPuesto()));
                     }
                 }
 
@@ -342,11 +353,10 @@ public class VisorPantalla extends Application {
                 // Mostramos máximo 5, resaltando el primero
                 for (int i = 0; i < Math.min(turnos.size(), 5); i++) {
                     Turno t = turnos.get(i);
-                    String turnoTexto  = t.getNumero();               // «P003», «I002», etc.
+                    String turnoTexto = t.getNumero(); // «P003», «I002», etc.
                     String puestoTexto = String.valueOf(t.getPuesto());
                     filasContainer.getChildren().add(
-                            crearFilaTurno(turnoTexto, puestoTexto, i == 0)
-                    );
+                            crearFilaTurno(turnoTexto, puestoTexto, i == 0));
                 }
             }
         } catch (Exception e) {
@@ -355,28 +365,28 @@ public class VisorPantalla extends Application {
     }
 
     // ---- CARGAR CARRUSEL DESDE resources/carrusel ----
-//    private void cargarImagenesDesdeRecursos() {
-//        List<String> rutas = Arrays.asList(
-//                "/carrusel/imagen2.jpg",
-//                "/carrusel/imagen3.jpg",
-//                "/carrusel/imagen4.jpg"
-//        );
-//
-//        for (String ruta : rutas) {
-//            try {
-//                URL url = getClass().getResource(ruta); // busca en el classpath
-//                if (url == null) {
-//                    System.err.println("No se encontró " + ruta);
-//                    continue;
-//                }
-//                Image img = new Image(url.toExternalForm(), false);
-//                imagenesCarrusel.add(img);
-//            } catch (Exception e) {
-//                System.err.println("Error cargando " + ruta);
-//                e.printStackTrace();
-//            }
-//        }
-//    }
+    // private void cargarImagenesDesdeRecursos() {
+    // List<String> rutas = Arrays.asList(
+    // "/carrusel/imagen2.jpg",
+    // "/carrusel/imagen3.jpg",
+    // "/carrusel/imagen4.jpg"
+    // );
+    //
+    // for (String ruta : rutas) {
+    // try {
+    // URL url = getClass().getResource(ruta); // busca en el classpath
+    // if (url == null) {
+    // System.err.println("No se encontró " + ruta);
+    // continue;
+    // }
+    // Image img = new Image(url.toExternalForm(), false);
+    // imagenesCarrusel.add(img);
+    // } catch (Exception e) {
+    // System.err.println("Error cargando " + ruta);
+    // e.printStackTrace();
+    // }
+    // }
+    // }
 
     private void cargarImagenesDesdeRecursos() {
         new Thread(() -> {
@@ -389,7 +399,8 @@ public class VisorPantalla extends Application {
                 conn.setReadTimeout(5000);
 
                 List<String> nombres = new ObjectMapper()
-                        .readValue(conn.getInputStream(), new TypeReference<List<String>>() {});
+                        .readValue(conn.getInputStream(), new TypeReference<List<String>>() {
+                        });
                 conn.disconnect();
 
                 // 2. Cargar cada imagen por su nombre
@@ -423,10 +434,10 @@ public class VisorPantalla extends Application {
         }).start();
     }
 
-
     // ---- CAMBIAR IMAGEN ----
     private void cambiarImagenCarrusel() {
-        if (imagenesCarrusel.isEmpty()) return;
+        if (imagenesCarrusel.isEmpty())
+            return;
         imagenCentral.setImage(imagenesCarrusel.get(indiceImagenActual));
         indiceImagenActual = (indiceImagenActual + 1) % imagenesCarrusel.size();
     }
@@ -436,6 +447,11 @@ public class VisorPantalla extends Application {
         private static final BlockingQueue<TurnoAudioData> queue = new LinkedBlockingQueue<>();
         private static boolean isWorkerRunning = false;
 
+        // Proceso persistente de PowerShell para reducir lag de TTS
+        private static Process ttsProcess;
+        private static PrintWriter ttsInput;
+        private static BufferedReader ttsOutput;
+
         public static synchronized void agregarTurno(String turno, String puesto) {
             queue.offer(new TurnoAudioData(turno, puesto));
             if (!isWorkerRunning) {
@@ -443,14 +459,48 @@ public class VisorPantalla extends Application {
             }
         }
 
+        private static synchronized void initTTSProcess() {
+            if (ttsProcess != null && ttsProcess.isAlive())
+                return;
+            try {
+                String script = "Add-Type -AssemblyName System.Speech; " +
+                        "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                        "$synth.Rate = 0; " +
+                        "$voces = $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -match '^es-' }; " +
+                        "if ($voces.Length -gt 0 -or $voces.Count -gt 0) { $synth.SelectVoice($voces[0].VoiceInfo.Name) }; " +
+                        "$synth.Speak(' '); " + // Forza la carga inicial de voces (evita delay silencioso en primer llamado)
+                        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
+                        "while ($true) { " +
+                        "  $text = [Console]::ReadLine(); " +
+                        "  if ($text -eq $null -or $text -eq 'EXIT') { break; } " +
+                        "  if ($text.Length -gt 0) { " +
+                        "    $synth.Speak($text); " +
+                        "    [Console]::WriteLine('DONE'); " +
+                        "  } " +
+                        "}";
+
+                ProcessBuilder pb = new ProcessBuilder("powershell.exe", "-NoProfile", "-Command", script);
+                pb.redirectErrorStream(true);
+                ttsProcess = pb.start();
+                ttsInput = new PrintWriter(
+                        new OutputStreamWriter(ttsProcess.getOutputStream(), java.nio.charset.StandardCharsets.UTF_8),
+                        true);
+                ttsOutput = new BufferedReader(
+                        new InputStreamReader(ttsProcess.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                System.err.println("Error inicializando TTS persistente: " + e.getMessage());
+            }
+        }
+
         private static void iniciarWorker() {
             isWorkerRunning = true;
             Thread worker = new Thread(() -> {
+                initTTSProcess(); // Inicializar el proceso en background al arrancar el worker
                 while (true) {
                     try {
                         TurnoAudioData data = queue.take(); // Bloquea hasta que haya un turno en cola
-                        reproducirSonidoSincrono(); // Reproduce el "Timbre" 2 veces y espera pacientemente
-                        hablar(data.turno, data.puesto); // Llama al sistema de voz nativo de Windows
+                        reproducirSonidoSincrono(); // Reproduce el "Timbre" y espera pacientemente
+                        hablar(data.turno, data.puesto); // Llama al sistema de voz (persistente)
                         Thread.sleep(1500); // Dar un pequeño respiro antes del siguiente turno si los hay
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -490,11 +540,24 @@ public class VisorPantalla extends Application {
                         volume.setValue(volume.getMaximum());
                     }
                     clip.start();
-                    
-                    // Esperar usando la duración real del clip (isRunning() puede fallar porque start es asíncrono)
+
+                    // Descontamos 600ms al tiempo de espera para omitir el silencio final/eco del
+                    // timbre
+                    // y lograr que la voz inicie de inmediato.
                     long durationMs = clip.getMicrosecondLength() / 1000;
-                    Thread.sleep(durationMs);
-                    clip.close();
+                    long waitMs = Math.max(0, durationMs - 600);
+                    Thread.sleep(waitMs);
+
+                    // En lugar de cortar el clip de golpe, lo cerramos en segundo plano
+                    // después de que el audio real haya terminado definitivamente.
+                    final Clip currentClip = clip;
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(1000);
+                            currentClip.close();
+                        } catch (Exception ignore) {
+                        }
+                    }).start();
                 }
             } catch (Exception e) {
                 System.err.println("Error al reproducir sonido: " + e.getMessage());
@@ -503,20 +566,27 @@ public class VisorPantalla extends Application {
 
         private static void hablar(String turno, String puesto) {
             try {
-                // Formateamos el turno. Si es un turno "A001", la voz suele decirlo como "A, cero cero uno"
-                // Lo enviamos directo para que el motor de voz decida cómo leerlo mejor.
+                if (ttsProcess == null || !ttsProcess.isAlive()) {
+                    initTTSProcess();
+                }
+
                 String texto = "Turno " + turno + ", acercarse al módulo " + puesto;
-                
-                // Ejecutamos TTS usando el motor de voz integrado de Windows vía PowerShell
-                String script = "Add-Type -AssemblyName System.Speech; " +
-                                "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
-                                "$synth.Rate = 0; " + // 0 = Velocidad normal
-                                "$synth.Speak('" + texto + "');";
-                
-                ProcessBuilder pb = new ProcessBuilder("powershell.exe", "-Command", script);
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
-                process.waitFor(); // Espera a que termine la frase completa
+
+                if (ttsInput != null) {
+                    ttsInput.println(texto);
+
+                    // Esperar confirmación para mantener la sincronía de la cola
+                    try {
+                        String response;
+                        while ((response = ttsOutput.readLine()) != null) {
+                            if ("DONE".equals(response.trim())) {
+                                break;
+                            }
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("Error leyendo feedback de TTS: " + ex.getMessage());
+                    }
+                }
             } catch (Exception e) {
                 System.err.println("Error en motor TTS: " + e.getMessage());
             }
@@ -525,7 +595,11 @@ public class VisorPantalla extends Application {
         private static class TurnoAudioData {
             String turno;
             String puesto;
-            TurnoAudioData(String t, String p) { this.turno = t; this.puesto = p; }
+
+            TurnoAudioData(String t, String p) {
+                this.turno = t;
+                this.puesto = p;
+            }
         }
     }
 
