@@ -44,3 +44,7 @@ PantallaCliente*.exe
 
 ### Archivos de Configuración Local ###
 config.properties
+
+### Maven Junk Files ###
+dependency-reduced-pom.xml
+\${project.build.directory}
